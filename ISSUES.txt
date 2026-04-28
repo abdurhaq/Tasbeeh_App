@@ -1,0 +1,4 @@
+Current Highlighted Issues :
+
+1) Notification permission not being asked
+2) Set reminders not persisting

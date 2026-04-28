@@ -9,7 +9,7 @@ void main() async {
 
   // Initialize notifications
   await NotificationService().init();
-  await NotificationService().requestPermissions();
+  //await NotificationService().requestPermissions();
 
   // Force portrait mode only
   await SystemChrome.setPreferredOrientations([
