@@ -3,6 +3,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -128,19 +129,27 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
-    final message = await _getNextMessage();
+    try {
+      //final message = await _getNextMessage();
+      final message = messages[DateTime
+          .now()
+          .millisecondsSinceEpoch % messages.length];
 
-    await plugin.zonedSchedule(
-      id,
-      '📿 Time for Tasbeeh',
-      message,
-      _nextInstanceOfTime(hour, minute),
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-      UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+      await plugin.zonedSchedule(
+        id,
+        '📿 Time for Tasbeeh',
+        message,
+        _nextInstanceOfTime(hour, minute),
+        details,
+        androidScheduleMode: AndroidScheduleMode.inexact,
+        uiLocalNotificationDateInterpretation:
+        UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      print('✅ Notification scheduled: id=$id at $hour:$minute');
+    } catch (e) {
+      print('❌ Schedule error: $e');
+    }
   }
 
   // ── Cancel a notification ──────────────────────────────────────────────────
@@ -153,40 +162,72 @@ class NotificationService {
     await plugin.cancelAll();
   }
 
-  Future<String> _getNextMessage() async {
-    final prefs = await SharedPreferences.getInstance();
+  //Future<String> _getNextMessage() async {
+  //  final prefs = await SharedPreferences.getInstance();
 
-    int index = prefs.getInt('notif_message_index') ?? 0;
+  //  int index = prefs.getInt('notif_message_index') ?? 0;
 
-    List<int> order;
-    final raw = prefs.getStringList('notif_message_order');
+  //  List<int> order;
+  //  final raw = prefs.getStringList('notif_message_order');
 
-    if (raw == null || raw.length != messages.length) {
-      order = List.generate(messages.length, (i) => i);
-      order.shuffle(Random());
-      await prefs.setStringList(
-        'notif_message_order',
-        order.map((e) => e.toString()).toList(),
-      );
-      index = 0;
-    } else {
-      order = raw.map((e) => int.parse(e)).toList();
-    }
+  //  if (raw == null || raw.length != messages.length) {
+  //    order = List.generate(messages.length, (i) => i);
+  //    order.shuffle(Random());
+  //    await prefs.setStringList(
+  //      'notif_message_order',
+  //      order.map((e) => e.toString()).toList(),
+  //    );
+  //    index = 0;
+  //  } else {
+  //    order = raw.map((e) => int.parse(e)).toList();
+  //  }
 
-    final message = messages[order[index]];
+  //  final message = messages[order[index]];
 
-    index++;
-    if (index >= messages.length) {
-      index = 0;
-      order.shuffle(Random());
-      await prefs.setStringList(
-        'notif_message_order',
-        order.map((e) => e.toString()).toList(),
-      );
-    }
+  //  index++;
+  //  if (index >= messages.length) {
+  //    index = 0;
+  //    order.shuffle(Random());
+  //    await prefs.setStringList(
+  //      'notif_message_order',
+  //      order.map((e) => e.toString()).toList(),
+  //    );
+  //  }
 
-    await prefs.setInt('notif_message_index', index);
-    return message;
+  //  await prefs.setInt('notif_message_index', index);
+  //  return message;
+  //}
+
+  Future<void> rescheduleAll(SharedPreferences prefs) async {
+    try {
+      final dailyEnabled = prefs.getBool('daily_enabled') ?? false;
+      if (dailyEnabled) {
+        final hour = prefs.getInt('daily_hour') ?? 7;
+        final minute = prefs.getInt('daily_minute') ?? 0;
+        await scheduleDailyNotification(
+          id: 0,
+          hour: hour,
+          minute: minute,
+        );
+      }
+    } catch (_) {}
+
+    try {
+      final raw = prefs.getString('custom_reminders');
+      if (raw != null) {
+        final List decoded = jsonDecode(raw);
+        for (final r in decoded) {
+          final enabled = r['enabled'] ?? true;
+          if (enabled) {
+            await scheduleDailyNotification(
+              id: r['id'],
+              hour: r['hour'],
+              minute: r['minute'],
+            );
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   // ── Helper ────────────────────────────────────────────────────────────────

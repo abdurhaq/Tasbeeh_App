@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 import 'dart:convert';
-import 'reminders_screen.dart';
+//import 'reminders_screen.dart';
 import '../theme/app_theme.dart';
 import '../models/dhikr.dart';
 import '../data/dhikr_data.dart';
 import '../widgets/ring_progress.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,6 +37,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _completeFade;
   late AnimationController _menuController;
   late Animation<double> _menuAnimation;
+
+  // ── History formatting
+  String _formatHistoryTime(DateTime time) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final itemDay = DateTime(time.year, time.month, time.day);
+
+    final diff = today.difference(itemDay).inDays;
+
+    if (itemDay == today) {
+      // Same day — show time
+      return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    } else if (itemDay == yesterday) {
+      return 'Yesterday';
+    } else if (diff <= 6) {
+      return '$diff days ago';
+    } else {
+      // Older than a week — show date
+      return '${time.day}/${time.month}/${time.year}';
+    }
+  }
+
   // ── Getters ────────────────────────────────────────────────────────────────
   Dhikr get _current => _dhikrList[_selectedIndex];
 
@@ -171,6 +195,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     await _saveHistory();
+  }
+
+  void _onUndo() async {
+    if (_count == 0) return;
+    if (_hapticEnabled) HapticFeedback.lightImpact();
+    if (_soundEnabled) {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/tap.mp3'));
+    }
+    setState(() => _count--);
+    await _saveCount();
   }
 
   void _onReset() {
@@ -317,7 +352,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 .isEmpty &&
                                 translitController.text
                                     .trim()
-                                    .isEmpty) return;
+                                    .isEmpty) {
+                              return;
+                            }
                             final newDhikr = Dhikr(
                               id: DateTime
                                   .now()
@@ -415,7 +452,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     height: 320,
                     child: ListView.separated(
                       itemCount: _history.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (_, i) {
                         final s = _history[_history.length - 1 - i];
                         final color = AppColors
@@ -460,13 +497,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                           fontSize: 16)),
                                   if (time != null)
                                     Text(
-                                      '${time.hour.toString().padLeft(
-                                          2, '0')}:${time.minute
-                                          .toString()
-                                          .padLeft(2, '0')}',
-                                      style: TextStyle(
-                                          color: AppColors.textHint,
-                                          fontSize: 11),
+                                      _formatHistoryTime(time),
+                                      style: TextStyle(color: AppColors.textHint, fontSize: 11),
                                     ),
                                 ],
                               ),
@@ -672,7 +704,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         children: [
           // ── Hamburger button ─────────────────────────────
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
                 onTap: () {
@@ -711,6 +743,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
+              const SizedBox(width: 48),
             ],
           ),
 
@@ -752,24 +785,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       },
                     ),
 
-                    _islandDivider(),
+                    //_islandDivider(),
 
                     // Reminders
-                    _islandOption(
-                      icon: Icons.notifications_rounded,
-                      label: 'Reminders',
-                      color: AppColors.textSecond,
-                      onTap: () {
-                        setState(() => _menuOpen = false);
-                        _menuController.reverse();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RemindersScreen(),
-                          ),
-                        );
-                      },
-                    ),
+                    //_islandOption(
+                    //  icon: Icons.notifications_rounded,
+                    //  label: 'Reminders',
+                    //  color: AppColors.textSecond,
+                    //  onTap: () {
+                    //    setState(() => _menuOpen = false);
+                    //    _menuController.reverse();
+                    //    Navigator.push(
+                    //      context,
+                    //      MaterialPageRoute(
+                    //        builder: (_) => const RemindersScreen(),
+                    //      ),
+                    //    );
+                    //  },
+                    //),
 
                     _islandDivider(),
 
@@ -900,13 +933,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _current.arabic,
             textAlign: TextAlign.center,
             textDirection: TextDirection.rtl,
-            style: Theme
-                .of(context)
-                .textTheme
-                .displayLarge
-                ?.copyWith(
+            style: GoogleFonts.amiri(
+              fontSize: 52,
               color: AppColors.textPrimary,
-              fontFamily: 'serif',
+              fontWeight: FontWeight.w500,
+              height: 1.4,
             ),
           ),
         ),
@@ -922,7 +953,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 .of(context)
                 .textTheme
                 .bodyMedium),
-        const SizedBox(height: 40),
+        const SizedBox(height: 24),
 
         // Ring + tap button
         GestureDetector(
@@ -962,17 +993,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         const SizedBox(height: 32),
 
+        const SizedBox(height: 8),
+
+        // Minus button — centered above Reset
+        GestureDetector(
+          onTap: _onUndo,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _currentColor.withOpacity(0.12),
+              border: Border.all(
+                color: _currentColor.withOpacity(0.35),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(
+              Icons.remove_rounded,
+              color: _currentColor.withOpacity(0.8),
+              size: 22,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
         // Reset button
         GestureDetector(
           onTap: _onReset,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white.withOpacity(0.06)),
             ),
-            child: Text('Reset',
+            child: Text(
+              'Reset',
               style: TextStyle(
                 color: AppColors.textSecond,
                 fontSize: 13,
@@ -1003,7 +1061,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _dhikrList.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (_, i) {
                       final selected = i == _selectedIndex;
                       final color = AppColors.dhikrColors[_dhikrList[i]
@@ -1060,18 +1118,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ],
-          ),
-
-          // Credit line
-          const SizedBox(height: 6),
-          Text(
-            'built by Abdur Rahman',
-            style: TextStyle(
-              color: AppColors.textHint,
-              fontSize: 10,
-              letterSpacing: 1.2,
-              fontStyle: FontStyle.italic,
-            ),
           ),
         ],
       ),

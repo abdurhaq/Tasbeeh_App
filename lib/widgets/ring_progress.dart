@@ -32,9 +32,9 @@ class RingProgress extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.15),
+                  color: color.withOpacity(0.20),
                   blurRadius: 80,
-                  spreadRadius: 30,
+                  spreadRadius: 40,
                 ),
               ],
             ),

@@ -2,7 +2,7 @@ name: tasbeeh_app
 description: "A new Flutter project."
 publish_to: "none"
 
-version: 1.0.0+2
+version: 1.0.0+10
 
 environment:
   sdk: ^3.11.4
@@ -15,14 +15,24 @@ dependencies:
   audioplayers: ^6.6.0
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
-  flutter_local_notifications: ^17.2.2
-  timezone: ^0.9.4
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
   flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.0
+
+flutter_native_splash:
+  color: "#080808"
+  image: assets/icon/icon.png
+
+  android_12:
+    color: "#080808"
+    image: assets/icon/icon.png
+
+  fullscreen: true
 
 flutter_launcher_icons:
   android: true
